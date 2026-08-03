@@ -4,6 +4,11 @@ import dayjs from 'dayjs';
 import { Op } from 'sequelize';
 import { Product, Movement, Delivery } from '../config/models.js';
 
+// Formata número como moeda brasileira, sem depender de libs extras
+function formatarMoeda(valor) {
+  const numero = Number(valor) || 0;
+  return 'R$ ' + numero.toFixed(2).replace('.', ',');
+}
 
 export async function exportProductsExcel(req, res) {
 
@@ -31,7 +36,7 @@ export async function exportProductsExcel(req, res) {
 
 
   // TÍTULO
-  sheet.mergeCells('A1:G1');
+  sheet.mergeCells('A1:I1');
 
   const title = sheet.getCell('A1');
 
@@ -66,6 +71,8 @@ export async function exportProductsExcel(req, res) {
     'Produto',
     'Marca',
     'Quantidade',
+    'Preço Unitário',
+    'Valor Total',
     'Validade',
     'Código de Barras',
     'Categoria',
@@ -99,21 +106,31 @@ export async function exportProductsExcel(req, res) {
   });
 
 
+  let valorTotalEstoque = 0;
 
   products.forEach((p,index)=>{
 
+    const precoUnitario = Number(p.price) || 0;
+    const valorTotalProduto = precoUnitario * (p.quantity || 0);
+    valorTotalEstoque += valorTotalProduto;
 
     const row = sheet.addRow([
 
       p.name || '-',
       p.brand || '-',
       p.quantity || 0,
+      precoUnitario,
+      valorTotalProduto,
       p.expirationDate || '-',
       p.barcode || '-',
       p.category || '-',
       p.location || '-'
 
     ]);
+
+    // formata as colunas de preço como moeda
+    row.getCell(4).numFmt = 'R$ #,##0.00';
+    row.getCell(5).numFmt = 'R$ #,##0.00';
 
 
     // cores alternadas
@@ -150,6 +167,16 @@ export async function exportProductsExcel(req, res) {
 
 
   });
+
+
+  // Linha de total geral do estoque
+  sheet.addRow([]);
+  const rowTotal = sheet.addRow(['', '', '', '', valorTotalEstoque, '', '', '', '']);
+  rowTotal.getCell(4).value = 'VALOR TOTAL DO ESTOQUE:';
+  rowTotal.getCell(4).font = { bold: true };
+  rowTotal.getCell(4).alignment = { horizontal: 'right' };
+  rowTotal.getCell(5).numFmt = 'R$ #,##0.00';
+  rowTotal.getCell(5).font = { bold: true, color: { argb: 'E30613' } };
 
 
 
@@ -304,7 +331,13 @@ export async function exportProductsPdf(req,res){
 
   // tabela
 
+  let valorTotalEstoque = 0;
+
   products.forEach((p,index)=>{
+
+    const precoUnitario = Number(p.price) || 0;
+    const valorTotalProduto = precoUnitario * (p.quantity || 0);
+    valorTotalEstoque += valorTotalProduto;
 
 
     const y = doc.y;
@@ -317,7 +350,7 @@ export async function exportProductsPdf(req,res){
         40,
         y-5,
         520,
-        35
+        47
       )
       .fill('#F3F3F3');
 
@@ -335,6 +368,9 @@ export async function exportProductsPdf(req,res){
       `Marca: ${p.brand || '-'}   Quantidade: ${p.quantity}`
     )
     .text(
+      `Preço Unitário: ${formatarMoeda(precoUnitario)}   Valor Total: ${formatarMoeda(valorTotalProduto)}`
+    )
+    .text(
       `Validade: ${p.expirationDate || '-'}   Local: ${p.location || '-'}`
     );
 
@@ -344,6 +380,19 @@ export async function exportProductsPdf(req,res){
 
   });
 
+
+
+  doc.moveDown();
+
+  doc
+  .fontSize(12)
+  .fillColor('#E30613')
+  .text(
+    `VALOR TOTAL DO ESTOQUE: ${formatarMoeda(valorTotalEstoque)}`,
+    {
+      align: 'right'
+    }
+  );
 
 
   doc.moveDown();

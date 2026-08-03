@@ -3,6 +3,11 @@
 
 let listaProdutos = []; // guarda os produtos carregados
 
+function formatarMoeda(valor) {
+  const numero = Number(valor) || 0;
+  return 'R$ ' + numero.toFixed(2).replace('.', ',');
+}
+
 async function carregarProdutos() {
   try {
     listaProdutos = await api.get('/products');
@@ -16,7 +21,7 @@ function renderizarTabela(produtos) {
   const tbody = document.getElementById('corpo-tabela-produtos');
 
   if (produtos.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#999;">Nenhum produto cadastrado.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#999;">Nenhum produto cadastrado.</td></tr>';
     return;
   }
 
@@ -52,6 +57,7 @@ function renderizarTabela(produtos) {
         <td><strong>${p.name}</strong></td>
         <td>${p.brand || '–'}</td>
         <td>${p.quantity}</td>
+        <td>${formatarMoeda(p.price)}</td>
         <td>${validade}</td>
         <td>${p.barcode || '–'}</td>
         <td>${p.category || '–'}</td>
@@ -91,6 +97,7 @@ function abrirModalEdicao(id) {
   document.getElementById('produto-nome').value = produto.name || '';
   document.getElementById('produto-marca').value = produto.brand || '';
   document.getElementById('produto-quantidade').value = produto.quantity || 0;
+  document.getElementById('produto-preco').value = produto.price || 0;
   document.getElementById('produto-qtd-min').value = produto.minQuantity || 5;
   document.getElementById('produto-validade').value = produto.expirationDate || '';
   document.getElementById('produto-codigo').value = produto.barcode || '';
@@ -105,7 +112,7 @@ function fecharModal() {
 }
 
 function limparFormularioProduto() {
-  const campos = ['produto-nome','produto-marca','produto-quantidade','produto-qtd-min',
+  const campos = ['produto-nome','produto-marca','produto-quantidade','produto-preco','produto-qtd-min',
     'produto-validade','produto-codigo','produto-categoria','produto-local'];
   campos.forEach(function (id) {
     document.getElementById(id).value = '';
@@ -127,6 +134,7 @@ async function salvarProduto() {
   fd.append('name', nome);
   fd.append('brand', document.getElementById('produto-marca').value);
   fd.append('quantity', document.getElementById('produto-quantidade').value || 0);
+  fd.append('price', document.getElementById('produto-preco').value || 0);
   fd.append('minQuantity', document.getElementById('produto-qtd-min').value || 5);
   fd.append('expirationDate', document.getElementById('produto-validade').value);
   fd.append('barcode', document.getElementById('produto-codigo').value);

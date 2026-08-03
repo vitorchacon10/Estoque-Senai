@@ -3,11 +3,19 @@ import { SolicitacaoRetirada, Product, Movement, User } from '../config/models.j
 // Docente, Coordenador ou Diretor solicitam a retirada de um produto.
 // Fica PENDENTE até um Diretor aprovar.
 export async function createSolicitacao(req, res) {
-  const { productId, quantity, sector, notes } = req.body;
+  const { productId, quantity, sector, notes, solicitanteNome, responsavelRetirada } = req.body;
 
   const qtd = Number(quantity);
   if (!productId || !qtd || qtd <= 0) {
     return res.status(400).json({ message: 'Informe o produto e uma quantidade válida.' });
+  }
+
+  if (!solicitanteNome || !solicitanteNome.trim()) {
+    return res.status(400).json({ message: 'Informe o nome do solicitante.' });
+  }
+
+  if (!responsavelRetirada || !responsavelRetirada.trim()) {
+    return res.status(400).json({ message: 'Informe o nome do responsável pela retirada.' });
   }
 
   const product = await Product.findByPk(productId);
@@ -23,6 +31,8 @@ export async function createSolicitacao(req, res) {
     quantity: qtd,
     sector: sector || null,
     notes: notes || null,
+    solicitanteNome: solicitanteNome.trim(),
+    responsavelRetirada: responsavelRetirada.trim(),
     status: 'PENDENTE'
   });
 
@@ -69,9 +79,9 @@ export async function approveSolicitacao(req, res) {
     quantity: solicitacao.quantity,
     previousQuantity,
     newQuantity: product.quantity,
-    responsible: req.user.name,
+    responsible: solicitacao.responsavelRetirada,
     sector: solicitacao.sector,
-    notes: `Solicitação #${solicitacao.id} aprovada por ${req.user.name}`,
+    notes: `Solicitação #${solicitacao.id} — solicitada por ${solicitacao.solicitanteNome}, retirada por ${solicitacao.responsavelRetirada}. Aprovada por ${req.user.name}`,
     ProductId: product.id,
     UserId: req.user.id
   });

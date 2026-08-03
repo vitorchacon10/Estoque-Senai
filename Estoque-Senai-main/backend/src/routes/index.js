@@ -31,8 +31,9 @@ routes.put('/products/:id', auth, allowRoles('COORDENADOR', 'DIRETOR'), upload.s
 // Excluir produto: só Diretor
 routes.delete('/products/:id', auth, allowRoles('DIRETOR'), deleteProduct);
 
-// Retirada DIRETA de estoque (sem passar por aprovação): só Diretor
-routes.post('/stock/move', auth, allowRoles('DIRETOR'), moveStock);
+// Entrada de estoque (scanner): Coordenador e Diretor podem dar entrada.
+// (Retirada direta continua exclusiva do Diretor — feita via moveStock com type=SAIDA)
+routes.post('/stock/move', auth, allowRoles('COORDENADOR', 'DIRETOR'), moveStock);
 routes.post('/deliveries', auth, allowRoles('DIRETOR'), createDelivery);
 
 // --- Solicitações de retirada ---

@@ -20,6 +20,7 @@ export const Product = sequelize.define('Product', {
   brand: DataTypes.STRING,
   quantity: { type: DataTypes.INTEGER, defaultValue: 0 },
   minQuantity: { type: DataTypes.INTEGER, defaultValue: 5 },
+  price: { type: DataTypes.FLOAT, defaultValue: 0 }, // preço unitário do produto
   expirationDate: DataTypes.DATEONLY,
   barcode: { type: DataTypes.STRING, unique: true },
   photoUrl: DataTypes.STRING,
@@ -50,6 +51,10 @@ export const SolicitacaoRetirada = sequelize.define('SolicitacaoRetirada', {
   quantity: { type: DataTypes.INTEGER, allowNull: false },
   sector: DataTypes.STRING,
   notes: DataTypes.TEXT,
+  // Nome de quem está solicitando (pode ser diferente de quem fisicamente retira o material)
+  solicitanteNome: { type: DataTypes.STRING, allowNull: false },
+  // Nome de quem vai efetivamente retirar o material no estoque
+  responsavelRetirada: { type: DataTypes.STRING, allowNull: false },
   status: { type: DataTypes.ENUM('PENDENTE', 'APROVADA', 'REJEITADA'), defaultValue: 'PENDENTE' },
   rejectionReason: DataTypes.TEXT,
   approvedAt: DataTypes.DATE
@@ -62,7 +67,7 @@ User.hasMany(Delivery); Delivery.belongsTo(User);
 
 Product.hasMany(SolicitacaoRetirada); SolicitacaoRetirada.belongsTo(Product);
 
-// Quem solicitou
+// Quem solicitou (usuário logado no sistema)
 User.hasMany(SolicitacaoRetirada, { foreignKey: 'requesterId', as: 'solicitacoes' });
 SolicitacaoRetirada.belongsTo(User, { foreignKey: 'requesterId', as: 'requester' });
 

@@ -11,6 +11,7 @@ const CORES_STATUS = {
 
 async function carregarSolicitacoes() {
   await carregarProdutosParaSolicitacao();
+  preencherSolicitantePadrao();
   await listarSolicitacoes();
 
   const usuario = usuarioLogado();
@@ -18,6 +19,18 @@ async function carregarSolicitacoes() {
   titulo.textContent = usuario && usuario.role === 'DIRETOR'
     ? 'Todas as solicitações'
     : 'Minhas solicitações';
+}
+
+// Pré-preenche o campo "Solicitante" com o nome de quem está logado
+// (mas continua editável, caso a pessoa esteja pedindo em nome de outra)
+function preencherSolicitantePadrao() {
+  const campoSolicitante = document.getElementById('sol-solicitante');
+  if (campoSolicitante.value) return; // não sobrescreve se já tiver algo digitado
+
+  const usuario = usuarioLogado();
+  if (usuario) {
+    campoSolicitante.value = usuario.name;
+  }
 }
 
 // Preenche o <select> de produtos no formulário de nova solicitação
@@ -38,13 +51,13 @@ async function carregarProdutosParaSolicitacao() {
 // Busca e renderiza a lista de solicitações
 async function listarSolicitacoes() {
   const corpo = document.getElementById('corpo-tabela-solicitacoes');
-  corpo.innerHTML = '<tr><td colspan="7">Carregando...</td></tr>';
+  corpo.innerHTML = '<tr><td colspan="8">Carregando...</td></tr>';
 
   try {
     const solicitacoes = await api.get('/solicitacoes');
     renderizarSolicitacoes(solicitacoes);
   } catch (err) {
-    corpo.innerHTML = `<tr><td colspan="7">Erro ao carregar solicitações: ${err.message}</td></tr>`;
+    corpo.innerHTML = `<tr><td colspan="8">Erro ao carregar solicitações: ${err.message}</td></tr>`;
   }
 }
 
@@ -54,7 +67,7 @@ function renderizarSolicitacoes(solicitacoes) {
   const ehDiretor = usuario && usuario.role === 'DIRETOR';
 
   if (!solicitacoes || solicitacoes.length === 0) {
-    corpo.innerHTML = '<tr><td colspan="7">Nenhuma solicitação encontrada.</td></tr>';
+    corpo.innerHTML = '<tr><td colspan="8">Nenhuma solicitação encontrada.</td></tr>';
     return;
   }
 
@@ -71,7 +84,8 @@ function renderizarSolicitacoes(solicitacoes) {
       <td>${s.Product ? s.Product.name : '-'}</td>
       <td>${s.quantity}</td>
       <td>${s.sector || '-'}</td>
-      <td>${s.requester ? s.requester.name : '-'}</td>
+      <td>${s.solicitanteNome || '-'}</td>
+      <td>${s.responsavelRetirada || '-'}</td>
       <td><strong style="color:${cor}">${s.status}</strong></td>
       <td>${data}</td>
       <td>
@@ -126,6 +140,8 @@ document.getElementById('btn-criar-solicitacao').addEventListener('click', async
 
   const productId = document.getElementById('sol-produto').value;
   const quantity = document.getElementById('sol-quantidade').value;
+  const solicitanteNome = document.getElementById('sol-solicitante').value.trim();
+  const responsavelRetirada = document.getElementById('sol-responsavel-retirada').value.trim();
   const sector = document.getElementById('sol-setor').value.trim();
   const notes = document.getElementById('sol-observacoes').value.trim();
 
@@ -139,14 +155,27 @@ document.getElementById('btn-criar-solicitacao').addEventListener('click', async
     msgEl.classList.add('mensagem-erro');
     return;
   }
+  if (!solicitanteNome) {
+    msgEl.textContent = 'Informe o nome do solicitante.';
+    msgEl.classList.add('mensagem-erro');
+    return;
+  }
+  if (!responsavelRetirada) {
+    msgEl.textContent = 'Informe o nome do responsável pela retirada.';
+    msgEl.classList.add('mensagem-erro');
+    return;
+  }
 
   try {
-    await api.post('/solicitacoes', { productId, quantity, sector, notes });
+    await api.post('/solicitacoes', {
+      productId, quantity, sector, notes, solicitanteNome, responsavelRetirada
+    });
     mostrarToast('Solicitação enviada! Aguarde a aprovação da Direção.');
 
-    // Limpa o formulário
+    // Limpa o formulário (mantém o solicitante pré-preenchido de novo)
     document.getElementById('sol-produto').value = '';
     document.getElementById('sol-quantidade').value = 1;
+    document.getElementById('sol-responsavel-retirada').value = '';
     document.getElementById('sol-setor').value = '';
     document.getElementById('sol-observacoes').value = '';
 
